@@ -13,6 +13,9 @@ type BatchItem<TItem, TResult> = {
   // This will be set to infinity while the item is being processed.
   retryAfter: number;
 
+  // Whether or not the item completed processing.
+  completed: boolean;
+
   // Resolves the batched item, confirming its value.
   resolve: (result: TResult) => void;
 
