@@ -1,17 +1,17 @@
-import pLimit, { LimitFunction } from 'p-limit';
-import ErrorEvent from './errorEvent';
-import ItemErrorEvent from './itemErrorEvent';
-import BatchConfiguration from './types/batchConfiguration';
-import BatchItem from './types/batchItem';
-import DeferredPromise from './types/deferredPromise';
+import PromiseQueue from '../promise-queue';
+import ErrorEvent from '../events/errorEvent';
+import ItemErrorEvent from '../events/itemErrorEvent';
+import BatchConfiguration from '../types/batchConfiguration';
+import BatchItem from '../types/batchItem';
+import DeferredPromise from '../types/deferredPromise';
 
 // A class for batching and processing multiple single items into a single call.
 class Batch<TItem, TResult> extends EventTarget {
   private queueMap: { [key: string]: BatchItem<TItem, TResult> } = {};
   private queueArray: BatchItem<TItem, TResult>[] = [];
   private promiseMap: { [key: string]: DeferredPromise<TResult>[] } = {};
-  private limiter = pLimit(1);
-  private concurrencyHandler: LimitFunction;
+  private limiter = new PromiseQueue<void>(1);
+  private concurrencyHandler: PromiseQueue<void>;
   private nextProcessTime: number = 0;
   private config: BatchConfiguration;
 
@@ -19,7 +19,7 @@ class Batch<TItem, TResult> extends EventTarget {
     super();
 
     this.config = configuration;
-    this.concurrencyHandler = pLimit(
+    this.concurrencyHandler = new PromiseQueue<void>(
       configuration.levelOfParallelism || Infinity
     );
   }
@@ -116,14 +116,14 @@ class Batch<TItem, TResult> extends EventTarget {
   // Will do nothing if the config requirements aren't met.
   check(): void {
     // We're using p-limit to ensure that multiple process calls can't be called at once.
-    this.limiter(this._check.bind(this)).catch((err) => {
-      // This should be impossible.. right?
+    this.limiter.enqueue(this._check.bind(this)).catch((err) => {
+      // This should be "impossible".. right?
       this.dispatchEvent(new ErrorEvent(err));
     });
   }
 
   // The actual implementation of the check method.
-  _check() {
+  _check(): Promise<void> {
     const retry = this.check.bind(this);
 
     // Check if the minimum amount of time between batches has been reached.
@@ -132,14 +132,14 @@ class Batch<TItem, TResult> extends EventTarget {
     if (remainingTime > 0) {
       // We haven't waited our minimum amount of time between processing intervals, yet.
       setTimeout(retry, remainingTime);
-      return;
+      return Promise.resolve();
     }
 
     // Get a batch of items to process.
     const batch = this.getBatch();
     if (batch.length < 1) {
       // Nothing in the queue to be processed.
-      return;
+      return Promise.resolve();
     }
 
     // Update the items that we're about to process, so they don't get double processed.
@@ -154,7 +154,7 @@ class Batch<TItem, TResult> extends EventTarget {
 
     setTimeout(async () => {
       try {
-        await this.concurrencyHandler(this.process.bind(this, batch));
+        await this.concurrencyHandler.enqueue(this.process.bind(this, batch));
       } catch (err) {
         this.dispatchEvent(new ErrorEvent(err));
       }
@@ -164,6 +164,8 @@ class Batch<TItem, TResult> extends EventTarget {
       // We have the maximum number of items in the batch, let's make sure we kick off the process call again.
       setTimeout(retry, this.config.minimumDelay);
     }
+
+    return Promise.resolve();
   }
 
   getBatch(): BatchItem<TItem, TResult>[] {

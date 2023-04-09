@@ -36,6 +36,10 @@ jobs:
         run: |
           npm run build
 
+      - name: '🧪 Test'
+        run: |
+          npm run test
+
       # Publish
       - name: '📤 Upload to npm'
         run: >-
