@@ -120,7 +120,7 @@ class Batch<TItem, TResult> extends EventTarget {
       }
 
       // Attempt to process the queue on the next event loop.
-      setTimeout(() => this.check(), 0);
+      setTimeout(check, 0);
     });
   }
 
