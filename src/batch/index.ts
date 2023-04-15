@@ -130,7 +130,7 @@ class Batch<TItem, TResult> extends EventTarget {
 
   // Batches together queued items, calls the process method.
   // Will do nothing if the config requirements aren't met.
-  check(): void {
+  private check(): void {
     if (this.limiter.size > 0) {
       // Already being checked.
       return;
@@ -144,7 +144,7 @@ class Batch<TItem, TResult> extends EventTarget {
   }
 
   // The actual implementation of the check method.
-  _check(): Promise<void> {
+  private _check(): Promise<void> {
     const retry = this.check.bind(this);
 
     // Get a batch of items to process.
