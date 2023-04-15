@@ -3,7 +3,7 @@ import {
   delayedPromise,
   delayTime,
   assertPending,
-} from '../../tests/utils/promise';
+} from '../test-utils/promise';
 
 describe('PromiseQueue', () => {
   it('Should only execute one promise at a time.', async () => {
