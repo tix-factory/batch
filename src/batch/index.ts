@@ -10,16 +10,15 @@ class Batch<TItem, TResult> extends EventTarget {
   private queueMap: { [key: string]: BatchItem<TItem, TResult> } = {};
   private queueArray: BatchItem<TItem, TResult>[] = [];
   private promiseMap: { [key: string]: DeferredPromise<TResult>[] } = {};
-  private limiter: PromiseQueue<void>;
+  private limiter = new PromiseQueue<void>(1);
   private concurrencyHandler: PromiseQueue<void>;
+  private nextProcessTime: number = 0;
   private config: BatchConfiguration;
 
   constructor(configuration: BatchConfiguration) {
     super();
 
     this.config = configuration;
-
-    this.limiter = new PromiseQueue<void>(1, configuration.minimumDelay || 0);
     this.concurrencyHandler = new PromiseQueue<void>(
       configuration.levelOfParallelism || Infinity
     );
@@ -35,7 +34,6 @@ class Batch<TItem, TResult> extends EventTarget {
       const retryCount = this.config.retryCount || 0;
       const getRetryDelay = this.getRetryDelay.bind(this);
       const dispatchEvent = this.dispatchEvent.bind(this);
-      const check = this.check.bind(this);
 
       // Step 1: Ensure we have a way to resolve/reject the promise for this item.
       const mergedPromise = promiseMap[key] || [];
@@ -48,9 +46,6 @@ class Batch<TItem, TResult> extends EventTarget {
       // Step 2: Check if we have the batched item created.
       if (!queueMap[key]) {
         const remove = (item: BatchItem<TItem, TResult>) => {
-          // Mark the item as completed, so we know we either resolved or rejected it.
-          item.completed = true;
-
           for (let i = 0; i < queueArray.length; i++) {
             if (queueArray[i].key === key) {
               queueArray.splice(i, 1);
@@ -67,13 +62,12 @@ class Batch<TItem, TResult> extends EventTarget {
           value: item,
           attempt: 0,
           retryAfter: 0,
-          completed: false,
           resolve(result) {
-            // We're not accepting any new items for this resolution.
-            remove(this);
-
             // Defer the resolution until after the thread resolves.
             setTimeout(() => {
+              // We're not accepting any new items for this resolution.
+              remove(this);
+
               // Process anyone who applied.
               while (mergedPromise.length > 0) {
                 const promise = mergedPromise.shift();
@@ -83,35 +77,29 @@ class Batch<TItem, TResult> extends EventTarget {
           },
           reject(error) {
             // Defer the resolution until after the thread resolves.
-            const retryDelay =
-              this.attempt <= retryCount ? getRetryDelay(this) : undefined;
-            const retryAfter =
-              retryDelay !== undefined
-                ? performance.now() + retryDelay
-                : undefined;
+            setTimeout(() => {
+              const retryAfter =
+                this.attempt <= retryCount
+                  ? performance.now() + getRetryDelay(this)
+                  : undefined;
 
-            // Emit an event to notify that the item failed to process.
-            dispatchEvent(new ItemErrorEvent(error, this, retryAfter));
+              // Emit an event to notify that the item failed to process.
+              dispatchEvent(new ItemErrorEvent(error, this, retryAfter));
 
-            if (retryAfter !== undefined) {
-              // The item can be retried, we haven't hit the maximum number of attempts yet.
-              this.retryAfter = retryAfter;
+              if (retryAfter !== undefined) {
+                // The item can be retried, we haven't hit the maximum number of attempts yet.
+                this.retryAfter = retryAfter;
+              } else {
+                // Remove the item, and reject anyone waiting on it.
+                remove(this);
 
-              // Ensure the check runs after the retry delay.
-              setTimeout(check, retryDelay);
-            } else {
-              // Remove the item, and reject anyone waiting on it.
-              remove(this);
-
-              // Defer the resolution until after the thread resolves.
-              setTimeout(() => {
                 // Process anyone who applied.
                 while (mergedPromise.length > 0) {
                   const promise = mergedPromise.shift();
                   promise?.reject(error);
                 }
-              }, 0);
-            }
+              }
+            }, 0);
           },
         };
 
@@ -127,11 +115,6 @@ class Batch<TItem, TResult> extends EventTarget {
   // Batches together queued items, calls the process method.
   // Will do nothing if the config requirements aren't met.
   check(): void {
-    if (this.limiter.size > 0) {
-      // Already being checked.
-      return;
-    }
-
     // We're using p-limit to ensure that multiple process calls can't be called at once.
     this.limiter.enqueue(this._check.bind(this)).catch((err) => {
       // This should be "impossible".. right?
@@ -143,11 +126,19 @@ class Batch<TItem, TResult> extends EventTarget {
   _check(): Promise<void> {
     const retry = this.check.bind(this);
 
+    // Check if the minimum amount of time between batches has been reached.
+    const now = performance.now();
+    const remainingTime = this.nextProcessTime - now;
+    if (remainingTime > 0) {
+      // We haven't waited our minimum amount of time between processing intervals, yet.
+      setTimeout(retry, remainingTime);
+      return Promise.resolve();
+    }
+
     // Get a batch of items to process.
     const batch = this.getBatch();
-
-    // Nothing in the queue ready to be processed.
     if (batch.length < 1) {
+      // Nothing in the queue to be processed.
       return Promise.resolve();
     }
 
@@ -157,32 +148,15 @@ class Batch<TItem, TResult> extends EventTarget {
       item.retryAfter = Infinity;
     });
 
+    if (this.config.minimumDelay) {
+      this.nextProcessTime = now + this.config.minimumDelay;
+    }
+
     setTimeout(async () => {
       try {
         await this.concurrencyHandler.enqueue(this.process.bind(this, batch));
       } catch (err) {
         this.dispatchEvent(new ErrorEvent(err));
-      } finally {
-        batch.forEach((item) => {
-          if (item.completed) {
-            // Item completed its processing, nothing more to do.
-            return;
-          } else if (item.retryAfter > 0 && item.retryAfter !== Infinity) {
-            // The item failed to process, but it is going to be retried.
-            return;
-          } else {
-            // Item neither rejected, or completed its processing status.
-            // This is a requirement, so we reject the item.
-            item.reject(
-              new Error(
-                'Item was not marked as resolved or rejected after batch processing completed.'
-              )
-            );
-          }
-        });
-
-        // Now that we've finished processing the batch, run the process again, just in case there's anything left.
-        setTimeout(retry, 0);
       }
     }, 0);
 

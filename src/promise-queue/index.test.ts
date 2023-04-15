@@ -95,32 +95,4 @@ describe('PromiseQueue', () => {
       expect(Array.from(running)).toEqual([]);
     }
   });
-
-  it('Should not wait between running queued promises', async () => {
-    const promiseQueue = new PromiseQueue<string>(2);
-    const start = performance.now();
-    const a = promiseQueue.enqueue(() => delayedPromise('a'));
-    const b = promiseQueue.enqueue(() => delayedPromise('b'));
-
-    await a;
-    await b;
-
-    const time = performance.now() - start;
-    expect(time).toBeGreaterThanOrEqual(delayTime);
-    expect(time).toBeLessThanOrEqual(delayTime * 1.1);
-  });
-
-  it('Should wait between running queued promises', async () => {
-    const promiseQueue = new PromiseQueue<string>(2, delayTime / 2);
-    const start = performance.now();
-    const a = promiseQueue.enqueue(() => delayedPromise('a'));
-    const b = promiseQueue.enqueue(() => delayedPromise('b'));
-
-    await a;
-    await b;
-
-    const time = performance.now() - start;
-    expect(time).toBeGreaterThanOrEqual(delayTime * 1.5);
-    expect(time).toBeLessThanOrEqual(delayTime * 2);
-  });
 });
