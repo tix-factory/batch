@@ -1,5 +1,5 @@
 import { Batch, BatchConfiguration, BatchItem, ErrorEvent } from '../';
-import { delayedPromise, delayTime } from '../../tests/utils/promise';
+import { delayedPromise, delayTime } from '../test-utils/promise';
 
 // Test data.
 const goodItem = 48103520;

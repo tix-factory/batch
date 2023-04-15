@@ -1,4 +1,4 @@
-import { assertPending } from '../../tests/utils/promise';
+import { assertPending } from '../test-utils/promise';
 import ItemErrorEvent from '../events/itemErrorEvent';
 import {
   TestBatcher,
