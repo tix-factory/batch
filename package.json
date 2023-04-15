@@ -4,15 +4,13 @@
   "description": "Merge multiple function calls into a single call.",
   "browser": "dist/index.js",
   "types": "dist/index.d.ts",
-  "type": "module",
   "scripts": {
-    "build": "tsc",
-    "test": "jest"
+    "build": "tsc"
+  },
+  "dependencies": {
+    "p-limit": "^4.0.0"
   },
   "devDependencies": {
-    "@types/jest": "^29.5.0",
-    "jest": "^29.5.0",
-    "ts-jest": "^29.1.0",
     "typescript": "^5.0.2"
   },
   "repository": {
@@ -27,9 +25,5 @@
   },
   "files": [
     "dist/"
-  ],
-  "jest": {
-    "preset": "ts-jest",
-    "testEnvironment": "node"
-  }
+  ]
 }

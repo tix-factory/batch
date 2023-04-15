@@ -1,5 +1,5 @@
 import ErrorEvent from './errorEvent';
-import BatchItem from '../types/batchItem';
+import BatchItem from './types/batchItem';
 
 // An event class which can be used to emit an error event for an item that failed to process.
 class ItemErrorEvent<TItem, TResult> extends ErrorEvent {
