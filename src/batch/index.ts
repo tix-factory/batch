@@ -19,10 +19,14 @@ class Batch<TItem, TResult> extends EventTarget {
 
     this.config = configuration;
 
-    this.limiter = new PromiseQueue<void>(1, configuration.minimumDelay || 0);
-    this.concurrencyHandler = new PromiseQueue<void>(
-      configuration.levelOfParallelism || Infinity
-    );
+    this.limiter = new PromiseQueue<void>({
+      levelOfParallelism: 1,
+      delayInMilliseconds: configuration.minimumDelay || 0,
+    });
+
+    this.concurrencyHandler = new PromiseQueue<void>({
+      levelOfParallelism: configuration.levelOfParallelism || Infinity,
+    });
   }
 
   // Enqueues an item into a batch, to be processed.

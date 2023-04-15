@@ -7,7 +7,7 @@ import {
 
 describe('PromiseQueue', () => {
   it('Should only execute one promise at a time.', async () => {
-    const promiseQueue = new PromiseQueue<string>(1);
+    const promiseQueue = new PromiseQueue<string>({ levelOfParallelism: 1 });
     const a = promiseQueue.enqueue(() => delayedPromise('a'));
     const b = promiseQueue.enqueue(() => delayedPromise('b'));
     const c = promiseQueue.enqueue(() => delayedPromise(new Error('c')));
@@ -38,7 +38,7 @@ describe('PromiseQueue', () => {
   });
 
   it('Should allow multiple promises to run at the same time', async () => {
-    const promiseQueue = new PromiseQueue<string>(2);
+    const promiseQueue = new PromiseQueue<string>({ levelOfParallelism: 2 });
     const running = new Set<string>();
 
     const a = promiseQueue.enqueue(async () => {
@@ -97,7 +97,7 @@ describe('PromiseQueue', () => {
   });
 
   it('Should not wait between running queued promises', async () => {
-    const promiseQueue = new PromiseQueue<string>(2);
+    const promiseQueue = new PromiseQueue<string>({ levelOfParallelism: 2 });
     const start = performance.now();
     const a = promiseQueue.enqueue(() => delayedPromise('a'));
     const b = promiseQueue.enqueue(() => delayedPromise('b'));
@@ -111,7 +111,10 @@ describe('PromiseQueue', () => {
   });
 
   it('Should wait between running queued promises', async () => {
-    const promiseQueue = new PromiseQueue<string>(2, delayTime / 2);
+    const promiseQueue = new PromiseQueue<string>({
+      levelOfParallelism: 2,
+      delayInMilliseconds: delayTime / 2,
+    });
     const start = performance.now();
     const a = promiseQueue.enqueue(() => delayedPromise('a'));
     const b = promiseQueue.enqueue(() => delayedPromise('b'));
