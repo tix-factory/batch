@@ -106,7 +106,10 @@ describe('PromiseQueue', () => {
     await b;
 
     const time = performance.now() - start;
-    expect(time).toBeGreaterThanOrEqual(delayTime);
+
+    // Adjust times because the event loop can run slightly faster than the exact specified time,
+    // or sometimes slightly over.
+    expect(time).toBeGreaterThanOrEqual(delayTime * 0.95);
     expect(time).toBeLessThanOrEqual(delayTime * 1.1);
   });
 
