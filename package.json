@@ -1,6 +1,6 @@
 {
   "name": "@tix-factory/batch",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Merge multiple function calls into a single call.",
   "browser": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -30,6 +30,9 @@
   ],
   "jest": {
     "preset": "ts-jest",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "testPathIgnorePatterns": [
+      "/dist/"
+    ]
   }
 }
