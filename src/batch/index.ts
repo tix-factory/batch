@@ -124,7 +124,7 @@ class Batch<TItem, TResult> extends EventTarget {
       }
 
       // Attempt to process the queue on the next event loop.
-      setTimeout(check, 0);
+      setTimeout(check, this.config.enqueueDeferDelay);
     });
   }
 
