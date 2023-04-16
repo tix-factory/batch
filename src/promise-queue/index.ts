@@ -39,13 +39,13 @@ class PromiseQueue<TResult> {
   // Puts a function that will create the promise to run on the queue, and returns a promise
   // that will return the result of the enqueued promise.
   enqueue(createPromise: PromiseFactory<TResult>): Promise<TResult> {
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
       this.queue.push({
         deferredPromise: { resolve, reject },
         createPromise,
       });
 
-      await this.process();
+      setTimeout(this.process.bind(this), 0);
     });
   }
 
