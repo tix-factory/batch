@@ -8,4 +8,5 @@ export { default as PromiseQueue } from './promise-queue';
 export { default as BatchItem } from './types/batchItem';
 export { default as BatchConfiguration } from './types/batchConfiguration';
 export { default as DeferredPromise } from './types/deferredPromise';
+export { default as PromiseQueueConfiguration } from './types/promiseQueueConfiguration';
 export { default as PromiseFactory } from './types/promiseFactory';
