@@ -1,6 +1,6 @@
 {
   "name": "@tix-factory/batch",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Merge multiple function calls into a single call.",
   "browser": "dist/index.js",
   "types": "dist/index.d.ts",
