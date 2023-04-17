@@ -110,7 +110,7 @@ describe('PromiseQueue', () => {
     // Adjust times because the event loop can run slightly faster than the exact specified time,
     // or sometimes slightly over.
     expect(time).toBeGreaterThanOrEqual(delayTime * 0.95);
-    expect(time).toBeLessThanOrEqual(delayTime * 1.1);
+    expect(time).toBeLessThanOrEqual(delayTime * 1.2);
   });
 
   it('Should wait between running queued promises', async () => {

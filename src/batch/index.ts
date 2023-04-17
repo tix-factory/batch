@@ -8,11 +8,15 @@ import DeferredPromise from '../types/deferredPromise';
 // A class for batching and processing multiple single items into a single call.
 class Batch<TItem, TResult> extends EventTarget {
   private queueMap: { [key: string]: BatchItem<TItem, TResult> } = {};
-  private queueArray: BatchItem<TItem, TResult>[] = [];
   private promiseMap: { [key: string]: DeferredPromise<TResult>[] } = {};
   private limiter: PromiseQueue<void>;
   private concurrencyHandler: PromiseQueue<void>;
-  private config: BatchConfiguration;
+
+  // All the batch items waiting to be processed.
+  protected queueArray: BatchItem<TItem, TResult>[] = [];
+
+  // The configuration for this batch processor.
+  protected config: BatchConfiguration;
 
   constructor(configuration: BatchConfiguration) {
     super();
@@ -124,7 +128,7 @@ class Batch<TItem, TResult> extends EventTarget {
       }
 
       // Attempt to process the queue on the next event loop.
-      setTimeout(check, 0);
+      setTimeout(check, this.config.enqueueDeferDelay);
     });
   }
 

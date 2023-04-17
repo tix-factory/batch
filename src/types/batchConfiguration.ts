@@ -15,6 +15,10 @@ type BatchConfiguration = {
   // The maximum number of batches that can be processed in parallel.
   // If unspecified, the level of parallelism is infinity.
   levelOfParallelism?: number;
+
+  // The time, in milliseconds, to defer processing a batch after an item has been enqueued.
+  // If unspecified, will default to zero.
+  enqueueDeferDelay?: number;
 };
 
 export default BatchConfiguration;
